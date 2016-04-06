@@ -71,7 +71,7 @@ class ConstraintSolver:
          c1.setEnviroment()
          while c1.problem.getSolution() is not None or len(c1.constraints) <= 0:
              t = ConstraintSolver()
-             t.domain = self.domain
+             t.setEnviroment()
              t.constraints = (list(c1.constraints))
              for line in reversed(self.constraints):
                  if line[0] != '%' and line[0] != '$':
@@ -96,12 +96,12 @@ CONSTRAINT_ATOM_NAME = "__constraint("
 
 # var e' l'id dell'atomo e name e' il suo nome
 def addedVarName(var, name):
-    print name
     if(name.startswith(CONSTRAINT_ATOM_NAME + '"$domain(')):
          setDomainFromString(name)
     elif name.startswith(CONSTRAINT_ATOM_NAME):
          ID_lits.append(var) 
          dict[var] = constraintAtomToString(name)
+         print name
          if  var in ID_lev0:
              constraintSolver.constraints.append(dict[var])
     return
@@ -123,13 +123,13 @@ def getAtomsToFreeze():
 
 # nofica quando un letterale tra quelli indicati in getLiterals() diventa vero
 # restituisce un insieme di letterali da inferire come true
-clauses = []
+reasons = []
 def onLiteralTrue(lit, pos):
     print "on Lit True"
     output = []
+    reasons = []
     constraintSolver.constraints.append(dict[lit])
     constraintSolver.addConstraints()
-    print constraintSolver.constraints
     s = constraintSolver.problem.getSolution() 
     if s is None:
         print "s is not sat"
@@ -138,7 +138,7 @@ def onLiteralTrue(lit, pos):
         for constraint in iis:
             for id, constr in dict.iteritems():
                 if constr == constraint and id!=lit:
-                    clauses.append(id)
+                    reasons.append(id)
                     print id, constr
     else :
         print s
@@ -147,9 +147,7 @@ def onLiteralTrue(lit, pos):
 # per ogni letterale inferito la ragione e' una clausola C. Il metodo restituisce C.
 def getReason():
     print "get Reason"
-    copy = list(clauses);
-    clauses=[]
-    return copy
+    return reasons
 
 def onLiteralsUndefined(*lits):
     for lit in lits:
