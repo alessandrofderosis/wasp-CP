@@ -127,6 +127,7 @@ reasons = []
 def onLiteralTrue(lit, pos):
     print "on Lit True"
     output = []
+    global reasons
     reasons = []
     constraintSolver.constraints.append(dict[lit])
     constraintSolver.addConstraints()
@@ -147,6 +148,7 @@ def onLiteralTrue(lit, pos):
 # per ogni letterale inferito la ragione e' una clausola C. Il metodo restituisce C.
 def getReason():
     print "get Reason"
+    print reasons
     return reasons
 
 def onLiteralsUndefined(*lits):
