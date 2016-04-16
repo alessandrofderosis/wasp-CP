@@ -124,7 +124,6 @@ constraintSolver = ConstraintSolver()
 CONSTRAINT_ATOM_NAME = "__constraint("
 debug = False
 
-# var e' l'id dell'atomo e name e' il suo nome
 def addedVarName(var, name):
     if(name.startswith(CONSTRAINT_ATOM_NAME + '"$domain(')):
          setDomainFromString(name)
@@ -139,79 +138,60 @@ def addedVarName(var, name):
              constraintSolver.constraints.append(dict[-var])
     return
 
-# invia come informazione se un atomo e' stato eliminato
 def onAtomElimination(var):
     return
 
-# restituisce i letterali per cui ti interessa la notifica del cambio di valore di verita'
 def getLiterals(nVars):
     constraintSolver.setEnviroment()
     return ID_lits
 
-# definisce gli atomi da non eliminare
 def getAtomsToFreeze():
     atoms = []
     return atoms
 
-# nofica quando un letterale tra quelli indicati in getLiterals() diventa vero
-# restituisce un insieme di letterali da inferire come true
 reasons = []
 def onLiteralTrue(lit, pos):
-    print "on Lit True"
     output = []
     global reasons
     reasons = []
     constraintSolver.constraints.append(dict[lit])
     constraintSolver.addConstraints()
-    print "try to get solution"
     s = constraintSolver.problem.getSolution() 
     if s is None:
-        print "s is not sat"
         iis = constraintSolver.computeIISBackwardFiltering()
         output.append(-lit)
         for constraint in iis:
             for id, constr in dict.iteritems():
                 if constr == constraint and id!=lit:
                     reasons.append(id)
-                    print id, constr
     else :
         constraintSolver.printSolution(s, debug)
     return output
 
-# per ogni letterale inferito la ragione e' una clausola C. Il metodo restituisce C.
 def getReason():
-    print "get Reason"
-    print reasons
     return reasons
 
 def onLiteralsUndefined(*lits):
     for lit in lits:
         if dict[lit] in constraintSolver.constraints:
             constraintSolver.constraints.remove(dict[lit])
-            print "removed constraint ", dict[lit]
     constraintSolver.problem.reset()
     constraintSolver.setEnviroment()
     return
 
-# notifica quando un letterale e' inferito true al livello 0
 def onLitAtLevelZero(lit):
     ID_lev0.append(lit)
     if dict.get(lit) is not None:
         constraintSolver.constraints.append(dict[lit])
     return
 
-#prima di partire controlla se il programma e' incoerente per via del plugin
-#0 se il programma non e' incoerente
-#!= 0 se il programma e' coerente
 def isProgramIncoherent():
     constraintSolver.addConstraints()
     sol=constraintSolver.problem.getSolution();
     if sol is None:
-        print "incoherent at lev 0" 
         return 1
     else:
         constraintSolver.printSolution(sol, debug)
-        print "coherent at lev 0" 
         return 0
     
 

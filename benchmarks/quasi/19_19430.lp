@@ -1,0 +1,80 @@
+#const n=20.
+state(2, 1, 1).
+state(8, 1, 4).
+state(14, 1, 16).
+state(16, 1, 10).
+state(6, 2, 2).
+state(10, 2, 8).
+state(16, 2, 1).
+state(18, 2, 19).
+state(9, 3, 17).
+state(18, 3, 2).
+state(8, 4, 7).
+state(10, 4, 10).
+state(13, 4, 2).
+state(1, 5, 6).
+state(3, 5, 18).
+state(7, 5, 14).
+state(8, 5, 15).
+state(11, 5, 20).
+state(18, 5, 4).
+state(2, 6, 14).
+state(16, 6, 20).
+state(1, 7, 16).
+state(2, 7, 17).
+state(4, 7, 20).
+state(19, 7, 13).
+state(5, 8, 19).
+state(13, 8, 7).
+state(18, 8, 9).
+state(13, 9, 4).
+state(16, 9, 3).
+state(18, 9, 14).
+state(1, 10, 2).
+state(3, 10, 3).
+state(6, 10, 20).
+state(7, 10, 9).
+state(9, 10, 6).
+state(5, 11, 10).
+state(9, 11, 9).
+state(13, 11, 8).
+state(16, 11, 7).
+state(5, 12, 5).
+state(14, 12, 18).
+state(19, 12, 20).
+state(2, 13, 9).
+state(5, 13, 12).
+state(17, 13, 4).
+state(3, 14, 13).
+state(6, 14, 18).
+state(7, 14, 15).
+state(10, 14, 7).
+state(13, 14, 10).
+state(18, 14, 5).
+state(3, 15, 4).
+state(5, 15, 16).
+state(14, 15, 19).
+state(8, 16, 18).
+state(10, 16, 12).
+state(12, 16, 1).
+state(18, 16, 10).
+state(4, 17, 13).
+state(7, 17, 18).
+state(8, 17, 5).
+state(14, 17, 2).
+state(3, 18, 9).
+state(4, 18, 8).
+state(15, 18, 5).
+state(17, 18, 2).
+state(13, 19, 9).
+state(14, 19, 11).
+state(15, 19, 3).
+state(18, 19, 20).
+state(3, 20, 17).
+state(14, 20, 13).
+__constraint("$domain(1..20)").
+:-__constraint(v(X1,Y), "$==", V), __constraint(v(X2,Y),"$==", V), X1 = 1..n, X2 = 1..n, X1 < X2, Y = 1..n, V = 1..n.
+:-__constraint(v(X,Y1), "$==", V), __constraint(v(X,Y2),"$==", V), Y1 = 1..n, Y2 = 1..n, Y1 < Y2, X = 1..n, V = 1..n.
+__constraint(v(X,Y), "$==", S) :- state(X,Y,S).
+state(X,Y):-state(X,Y,S).
+{__constraint(v(X,Y), "$==", V)}:- X = 1..n, Y = 1..n, V = 1..n, not state(X,Y).
