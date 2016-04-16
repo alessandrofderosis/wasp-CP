@@ -7,8 +7,9 @@ import re
 from twisted.trial._synctest import Todo
 from numpy.core.defchararray import replace
 from _dbus_bindings import String
-from _ast import IsNot
+from _ast import IsNot, arguments
 from cv2 import line
+from numpy import negative
 
 class ConstraintSolver:
      lines = [];
@@ -26,6 +27,9 @@ class ConstraintSolver:
         
      def addConstraints(self):
          for constraint in self.constraints:
+             negativeConstraint = constraint.startswith('not ')
+             if negativeConstraint:
+                 constraint = constraint[4:len(constraint)]
              m = regexVariable.findall(constraint)
              variablesList = []
              index = 0    
@@ -35,15 +39,13 @@ class ConstraintSolver:
                  if newLine != constraint:
                     constraint = newLine
                     index += 1
-             def make_closure(constraint): 
-                 return lambda *args: eval(constraint) 
-            # print constraint, "  ", variablesList
+             def make_closure(constraint):
+                 if negativeConstraint: 
+                     return lambda *args: not eval(constraint)
+                 else:
+                     return lambda *args: eval(constraint)
+#              print constraint, "  ", variablesList
              self.problem.addConstraint(make_closure(constraint), variablesList)
-    
-     def printSolution(self):
-        solutions = self.problem.getSolutions()
-        for solution in solutions:
-                print solution 
                            
                 
      def computeIISForwardFiltering(self):
@@ -84,15 +86,43 @@ class ConstraintSolver:
          c1.constraints.pop(0)
          return c1.constraints
      
+     def printSolution(self,sol,debug):
+        if debug:
+                for c in self.constraints:
+                    self.checkConsistency(sol, c)
+#         else:
+#             print sol
+    
+     
+     def checkConsistency(self,sol, constraint):
+        m = regexVariable.findall(constraint)
+        variablesList = []
+        index = 0    
+        for variable in m:
+            variablesList.append(variable)
+            newLine = constraint.replace(variable, "args[" + String(index) + ']')
+            if newLine != constraint:
+               constraint = newLine
+               index += 1
+        def make_closure(constraint): 
+            return lambda *args: eval(constraint)
+        f=make_closure(constraint)
+        arguments=[]
+        for v in variablesList:
+            arguments.append(sol[v])
+            print v,":",sol[v],
+        print constraint, f(*arguments) 
+     
 # Start module casp                
 ID_lits = []
 ID_lev0 = []
 dict = {}
 regexVariableAndConstant = re.compile('([A-Za-z]+[\w,()]*|\d+,?|\-\d+,?)')
 regexVariable = re.compile('[A-Za-z]+[\w,()]*')
-regexOperator = re.compile('\$(\>=|\<=|\<|\>|\+|\*|\-|\/|\%|\==)')
+regexOperator = re.compile('\$(\>=|\<=|\<|\>|\+|\*|\-|\/|\%|\==|\!=)')
 constraintSolver = ConstraintSolver()
 CONSTRAINT_ATOM_NAME = "__constraint("
+debug = False
 
 # var e' l'id dell'atomo e name e' il suo nome
 def addedVarName(var, name):
@@ -100,10 +130,13 @@ def addedVarName(var, name):
          setDomainFromString(name)
     elif name.startswith(CONSTRAINT_ATOM_NAME):
          ID_lits.append(var) 
-         dict[var] = constraintAtomToString(name)
-         print name
+         dict[var] = constraintAtomToString(name,False)
+         ID_lits.append(-var)
+         dict[-var]= constraintAtomToString(name, True)
          if  var in ID_lev0:
              constraintSolver.constraints.append(dict[var])
+         elif -var in ID_lev0:
+             constraintSolver.constraints.append(dict[-var])
     return
 
 # invia come informazione se un atomo e' stato eliminato
@@ -112,7 +145,6 @@ def onAtomElimination(var):
 
 # restituisce i letterali per cui ti interessa la notifica del cambio di valore di verita'
 def getLiterals(nVars):
-    print "getLits" , ID_lits
     constraintSolver.setEnviroment()
     return ID_lits
 
@@ -131,6 +163,7 @@ def onLiteralTrue(lit, pos):
     reasons = []
     constraintSolver.constraints.append(dict[lit])
     constraintSolver.addConstraints()
+    print "try to get solution"
     s = constraintSolver.problem.getSolution() 
     if s is None:
         print "s is not sat"
@@ -142,7 +175,7 @@ def onLiteralTrue(lit, pos):
                     reasons.append(id)
                     print id, constr
     else :
-        print s
+        constraintSolver.printSolution(s, debug)
     return output
 
 # per ogni letterale inferito la ragione e' una clausola C. Il metodo restituisce C.
@@ -177,8 +210,10 @@ def isProgramIncoherent():
         print "incoherent at lev 0" 
         return 1
     else:
-        print sol
+        constraintSolver.printSolution(sol, debug)
+        print "coherent at lev 0" 
         return 0
+    
 
 def find_arguments(s):
     try:
@@ -197,7 +232,7 @@ def setDomainFromString(domainString):
      assert(min <= max)
      ConstraintSolver.domain = range(min, max + 1)
 
-def constraintAtomToString(lit):
+def constraintAtomToString(lit,neg):
     arguments = find_arguments(lit) 
     arguments = arguments.replace('"', "")
     toReturn = ""
@@ -213,8 +248,11 @@ def constraintAtomToString(lit):
                 ConstraintSolver.variablesSet.add(variablesAndConstants[i])
         if i < len(operators):
             toReturn = toReturn[0:len(toReturn) - 1] + operators[i].replace("$", "")
+    if neg:
+        toReturn = "not " + toReturn
     return toReturn
 
 
 
+       
 
