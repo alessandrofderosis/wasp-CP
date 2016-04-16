@@ -39,51 +39,48 @@ class ConstraintSolver:
                  if newLine != constraint:
                     constraint = newLine
                     index += 1
-             def make_closure(constraint):
+             def make_closure(constraint,negativeConstraint):
                  if negativeConstraint: 
                      return lambda *args: not eval(constraint)
                  else:
                      return lambda *args: eval(constraint)
 #              print constraint, "  ", variablesList
-             self.problem.addConstraint(make_closure(constraint), variablesList)
+             self.problem.addConstraint(make_closure(constraint,negativeConstraint), variablesList)
                            
                 
      def computeIISForwardFiltering(self):
          c1 = ConstraintSolver()
-         c1.constraints = self.constraints
          c1.setEnviroment()
          while c1.problem.getSolution() is not None or len(c1.constraints) <= 0:
              t = ConstraintSolver()
              t.setEnviroment()
              t.constraints = (list(c1.constraints))
              for line in self.constraints:
-                 if line[0] != '%' and line[0] != '$':
+                 if line[0] != '$':
                      t.constraints.append(line)
                      t.addConstraints()
                      if t.problem.getSolution() is None:
                          c1.constraints.append(line)
                          c1.addConstraints()
                          break
-         c1.constraints.pop(0)
          return c1.constraints
      
      def computeIISBackwardFiltering(self):
          c1 = ConstraintSolver()
-         c1.constraints = self.constraints
+         c1.constraints = []
          c1.setEnviroment()
          while c1.problem.getSolution() is not None or len(c1.constraints) <= 0:
              t = ConstraintSolver()
              t.setEnviroment()
              t.constraints = (list(c1.constraints))
              for line in reversed(self.constraints):
-                 if line[0] != '%' and line[0] != '$':
+                 if line[0] != '$':
                      t.constraints.append(line)
                      t.addConstraints()
                      if t.problem.getSolution() is None:
                          c1.constraints.append(line)
                          c1.addConstraints()
                          break
-         c1.constraints.pop(0)
          return c1.constraints
      
      def printSolution(self,sol,debug):
@@ -124,6 +121,7 @@ constraintSolver = ConstraintSolver()
 CONSTRAINT_ATOM_NAME = "__constraint("
 debug = False
 
+# var e' l'id dell'atomo e name e' il suo nome
 def addedVarName(var, name):
     if(name.startswith(CONSTRAINT_ATOM_NAME + '"$domain(')):
          setDomainFromString(name)
@@ -133,65 +131,96 @@ def addedVarName(var, name):
          ID_lits.append(-var)
          dict[-var]= constraintAtomToString(name, True)
          if  var in ID_lev0:
+             print dict[var]
              constraintSolver.constraints.append(dict[var])
          elif -var in ID_lev0:
+             print dict[-var]
              constraintSolver.constraints.append(dict[-var])
     return
 
+# invia come informazione se un atomo e' stato eliminato
 def onAtomElimination(var):
     return
 
+# restituisce i letterali per cui ti interessa la notifica del cambio di valore di verita'
 def getLiterals(nVars):
     constraintSolver.setEnviroment()
     return ID_lits
 
+# definisce gli atomi da non eliminare
 def getAtomsToFreeze():
     atoms = []
     return atoms
 
+# nofica quando un letterale tra quelli indicati in getLiterals() diventa vero
+# restituisce un insieme di letterali da inferire come true
 reasons = []
 def onLiteralTrue(lit, pos):
+    print "on Lit True"
     output = []
     global reasons
     reasons = []
-    constraintSolver.constraints.append(dict[lit])
+    if dict[lit] not in constraintSolver.constraints:
+        constraintSolver.constraints.append(dict[lit])
     constraintSolver.addConstraints()
+    print constraintSolver.constraints
+    print "try to get solution"
     s = constraintSolver.problem.getSolution() 
     if s is None:
+        print "s is not sat"
         iis = constraintSolver.computeIISBackwardFiltering()
+        print iis
         output.append(-lit)
-        for constraint in iis:
-            for id, constr in dict.iteritems():
-                if constr == constraint and id!=lit:
-                    reasons.append(id)
+        if len(iis)==1:
+            reasons.append(lit)
+        else:
+            for constraint in iis:
+                for id, constr in dict.iteritems():
+                    if constr == constraint and id!=lit:
+                        reasons.append(id)
+                        print id, constr
+        print "output  ",output
     else :
         constraintSolver.printSolution(s, debug)
     return output
 
+# per ogni letterale inferito la ragione e' una clausola C. Il metodo restituisce C.
 def getReason():
+    print "get Reason"
+    print reasons
     return reasons
 
 def onLiteralsUndefined(*lits):
     for lit in lits:
         if dict[lit] in constraintSolver.constraints:
             constraintSolver.constraints.remove(dict[lit])
+            print "removed constraint ", dict[lit]
     constraintSolver.problem.reset()
     constraintSolver.setEnviroment()
     return
 
+# notifica quando un letterale e' inferito true al livello 0
 def onLitAtLevelZero(lit):
     ID_lev0.append(lit)
+    print "lit ", lit
     if dict.get(lit) is not None:
+        print lit, " at lev 0 ",dict[lit]
         constraintSolver.constraints.append(dict[lit])
     return
 
+#prima di partire controlla se il programma e' incoerente per via del plugin
+#0 se il programma non e' incoerente
+#!= 0 se il programma e' coerente
 def isProgramIncoherent():
+    constraintSolver.constraints
     constraintSolver.addConstraints()
     sol=constraintSolver.problem.getSolution();
-    if sol is None:
+    if sol is None and len(constraintSolver.constraints)>0:
+        print "incoherent at lev 0"  
         return 1
     else:
         constraintSolver.printSolution(sol, debug)
+        print "coherent at lev 0" 
         return 0
     
 
