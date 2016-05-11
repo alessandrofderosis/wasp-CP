@@ -28,7 +28,7 @@ pour(B,T) :- pour(B,T,A).
 %volume(B,T) $>=0 :- bucket(B), time(T).
 %volume(B,T) $<10 :- bucket(B), time(T).
 
-__constraint("$domain(0..1)").
+__constraint("$domain(0..100)").
 
 #hide bucket/1.
 #hide time/1.
