@@ -1,0 +1,149 @@
+1 2 0 0
+1 3 0 0
+1 4 0 0
+1 5 0 0
+1 6 0 0
+1 7 0 0
+1 8 0 0
+1 9 0 0
+1 10 0 0
+1 11 1 0 12
+1 13 1 0 14
+1 15 1 0 16
+1 17 1 0 18
+1 11 1 0 19
+1 13 1 0 20
+1 15 1 0 21
+1 17 1 0 22
+1 23 1 0 24
+1 25 1 0 26
+1 27 1 0 28
+1 29 1 0 30
+1 23 1 0 31
+1 25 1 0 32
+1 27 1 0 33
+1 29 1 0 34
+1 35 1 0 36
+1 37 1 0 38
+1 35 1 0 39
+1 37 1 0 40
+1 45 0 0
+1 50 0 0
+3 4 46 47 48 49 1 0 50
+2 51 4 0 1 46 47 48 49
+2 52 4 0 2 46 47 48 49
+1 1 2 1 51 50
+1 1 2 0 50 52
+3 4 41 42 43 44 1 0 45
+2 53 4 0 1 41 42 43 44
+2 54 4 0 2 41 42 43 44
+1 1 2 1 53 45
+1 1 2 0 45 54
+1 1 2 0 49 55
+1 1 2 0 48 56
+1 1 2 0 47 57
+1 1 2 0 46 58
+1 59 1 0 49
+1 60 1 0 48
+1 59 1 0 47
+1 60 1 0 46
+1 61 1 0 44
+1 62 1 0 43
+1 61 1 0 42
+1 62 1 0 41
+1 1 2 1 60 63
+1 1 2 1 60 63
+1 1 2 1 59 64
+1 1 2 1 59 64
+1 1 1 0 25
+0
+64 __constraint(volume(a,1),"$!=",volume(a,0))
+63 __constraint(volume(b,1),"$!=",volume(b,0))
+59 pour(a,0)
+61 pour(a,1)
+55 __constraint(volume(a,1),"$!=",volume(a,0),"$+",1)
+62 pour(b,1)
+49 pour(a,0,1)
+48 pour(b,0,1)
+46 pour(b,0,2)
+43 pour(b,1,1)
+41 pour(b,1,2)
+30 __constraint(volume(a,0),"$<",volume(b,0))
+29 up(a,0)
+31 __constraint(volume(b,1),"$<",volume(a,1))
+32 __constraint(volume(a,1),"$<",volume(a,1))
+33 __constraint(volume(b,0),"$<",volume(a,0))
+28 __constraint(volume(b,0),"$<",volume(b,0))
+27 up(b,0)
+26 __constraint(volume(a,1),"$<",volume(b,1))
+25 up(a,1)
+34 __constraint(volume(a,0),"$<",volume(a,0))
+58 __constraint(volume(b,1),"$!=",volume(b,0),"$+",2)
+24 __constraint(volume(b,1),"$<",volume(b,1))
+60 pour(b,0)
+22 __constraint(volume(a,0),"$>",volume(a,0))
+38 __constraint(volume(a,0),"$==",volume(b,0))
+20 __constraint(volume(a,1),"$>",volume(a,1))
+57 __constraint(volume(a,1),"$!=",volume(a,0),"$+",2)
+19 __constraint(volume(b,1),"$>",volume(a,1))
+35 balance(1)
+42 pour(a,1,2)
+15 down(b,0)
+14 __constraint(volume(a,1),"$>",volume(b,1))
+40 __constraint(volume(b,0),"$==",volume(a,0))
+16 __constraint(volume(b,0),"$>",volume(b,0))
+39 __constraint(volume(b,1),"$==",volume(a,1))
+17 down(a,0)
+13 down(a,1)
+8 amount(2)
+36 __constraint(volume(a,1),"$==",volume(b,1))
+47 pour(a,0,2)
+37 balance(0)
+7 amount(1)
+6 __constraint("$domain(0..100)")
+44 pour(a,1,1)
+21 __constraint(volume(b,0),"$>",volume(a,0))
+18 __constraint(volume(a,0),"$>",volume(b,0))
+23 up(b,1)
+12 __constraint(volume(b,1),"$>",volume(b,1))
+5 __constraint(volume(b,0),"$==",1)
+56 __constraint(volume(b,1),"$!=",volume(b,0),"$+",1)
+11 down(b,1)
+4 __constraint(volume(a,0),"$==",0)
+0
+B+
+0
+B-
+1
+0
+E
+4 __constraint(volume(a,0),"$==",0)
+5 __constraint(volume(b,0),"$==",1)
+12 __constraint(volume(b,1),"$>",volume(b,1))
+14 __constraint(volume(a,1),"$>",volume(b,1))
+16 __constraint(volume(b,0),"$>",volume(b,0))
+18 __constraint(volume(a,0),"$>",volume(b,0))
+19 __constraint(volume(b,1),"$>",volume(a,1))
+20 __constraint(volume(a,1),"$>",volume(a,1))
+21 __constraint(volume(b,0),"$>",volume(a,0))
+22 __constraint(volume(a,0),"$>",volume(a,0))
+24 __constraint(volume(b,1),"$<",volume(b,1))
+26 __constraint(volume(a,1),"$<",volume(b,1))
+28 __constraint(volume(b,0),"$<",volume(b,0))
+30 __constraint(volume(a,0),"$<",volume(b,0))
+31 __constraint(volume(b,1),"$<",volume(a,1))
+32 __constraint(volume(a,1),"$<",volume(a,1))
+33 __constraint(volume(b,0),"$<",volume(a,0))
+34 __constraint(volume(a,0),"$<",volume(a,0))
+36 __constraint(volume(a,1),"$==",volume(b,1))
+38 __constraint(volume(a,0),"$==",volume(b,0))
+39 __constraint(volume(b,1),"$==",volume(a,1))
+40 __constraint(volume(b,0),"$==",volume(a,0))
+55 __constraint(volume(a,1),"$!=",volume(a,0),"$+",1)
+56 __constraint(volume(b,1),"$!=",volume(b,0),"$+",1)
+57 __constraint(volume(a,1),"$!=",volume(a,0),"$+",2)
+58 __constraint(volume(b,1),"$!=",volume(b,0),"$+",2)
+63 __constraint(volume(b,1),"$!=",volume(b,0))
+64 __constraint(volume(a,1),"$!=",volume(a,0))
+0
+1
