@@ -125,7 +125,7 @@ regexOperator = re.compile('\$(\>=|\<=|\<|\>|\+|\*|\-|\/|\%|\==|\!=)')
 constraintSolver = ConstraintSolver()
 CONSTRAINT_ATOM_NAME = "__constraint("
 debugEvaluationConstraint = False
-debugPrint = True
+debugPrint = False
 
 # var e' l'id dell'atomo e name e' il suo nome
 def addedVarName(var, name):
@@ -249,6 +249,9 @@ def isProgramIncoherent():
         constraintSolver.printSolution(sol, debugEvaluationConstraint)
         if debugPrint: print "coherent at lev 0"  
         return 0
+    
+def onAnswerSet(*answer_set):
+    print constraintSolver.problem.getSolution()
     
 
 def find_arguments(s):
