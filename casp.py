@@ -58,26 +58,25 @@ class ConstraintSolver:
         return True
      
      def computeIISBackwardForwardFiltering(self,backward):
-        c1 = ConstraintSolver()
-        c1.setEnviroment()
 
         listConstraint=list(self.constraints)
         if backward:
             listConstraint.reverse()
         lastIndex=len(listConstraint)
         
-        while c1.problem.getSolution() is not None or len(c1.constraints)==0:
-            #print "c1",c1.constraints
-            Tconstraints = list(c1.constraints)
+        c1ListConstraint =[]
+        while True:
+            #print "c1",c1ListConstraint
+            Tconstraints = list(c1ListConstraint)
             for i in range(lastIndex):
                 Tconstraints.append(listConstraint[i])
                 if self.atLeastOneSolution(Tconstraints) is False:
-                    c1.constraints.append(listConstraint[i])
-                    c1.addConstraints()
+                    c1ListConstraint.append(listConstraint[i])
                     lastIndex = i
+                    if self.atLeastOneSolution(c1ListConstraint) is False:
+                        return c1ListConstraint
                     break
                 
-        return c1.constraints
      
      def printSolution(self,sol,debugEvaluationConstraint):
         if debugEvaluationConstraint:
@@ -140,7 +139,7 @@ def addedVarName(var, name):
          if  var in ID_lev0:
              if debugPrint: print "added lev 0", var, dict[var]
              constraintSolver.constraints.append(dict[var])
-        elif -var in ID_lev0:
+         elif -var in ID_lev0:
             if debugPrint: print "added lev 0",-var, dict[-var]
             constraintSolver.constraints.append(dict[-var])
     return
@@ -169,11 +168,20 @@ def onLiteralTrue(lit, pos):
     if debugPrint: print "on lit true lit: ",lit, dict[lit]
     if dict[lit] not in constraintSolver.constraints:
         constraintSolver.constraints.append(dict[lit])
+    
+    ############# non dovrebbe accadere
+    if dict[-lit] in constraintSolver.constraints:
+        constraintSolver.constraints.remove(dict[-lit])
+        constraintSolver.problem.reset()
+        constraintSolver.setEnviroment()
+        if debugPrint: print "on lit true -lit ", -lit, " ",dict[-lit], "already presents"
+    ###############################
+    
     constraintSolver.addConstraints()
     if debugPrint: print constraintSolver.constraints
     if debugPrint: print "try to get solution"
     s = constraintSolver.problem.getSolution() 
-    if debugPrint: print s
+    #if debugPrint: print s
     if s is None:
         if debugPrint:print "s is not sat" 
         iis = constraintSolver.computeIISBackwardForwardFiltering(False)
@@ -199,10 +207,11 @@ def getReason():
     return reasons
 
 def onLiteralsUndefined(*lits):
+    if debugPrint: print "to remove constraints ",lits
     for lit in lits:
         if dict[lit] in constraintSolver.constraints:
             constraintSolver.constraints.remove(dict[lit])
-            if debugPrint: print "removed constraint ", dict[lit] 
+            if debugPrint: print "removed constraint ",lit, dict[lit] 
     constraintSolver.problem.reset()
     constraintSolver.setEnviroment()
     return
@@ -212,13 +221,17 @@ def onLitAtLevelZero(lit):
     ID_lev0.append(lit)
     if dict.get(lit) is not None and dict[lit] not in constraintSolver.constraints:
         if debugPrint: print lit, " at lev 0 ",dict[lit] 
+        
+        ################### non dovrebbe accadere
         if dict[-lit] in constraintSolver.constraints:
-            if debugPrint: print "onLivAtLev0 removed ",lit,dict[-lit]
+            if debugPrint: print "onLivAtLev0 removed ",-lit,dict[-lit]
             constraintSolver.constraints.remove(dict[-lit])
             constraintSolver.problem.reset()
             constraintSolver.setEnviroment()
-        constraintSolver.constraints.append(dict[lit])
+        ###########################
         
+        
+        constraintSolver.constraints.append(dict[lit])
     return
 
 #prima di partire controlla se il programma e' incoerente per via del plugin
