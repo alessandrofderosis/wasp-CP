@@ -125,7 +125,7 @@ regexOperator = re.compile('\$(\>=|\<=|\<|\>|\+|\*|\-|\/|\%|\==|\!=)')
 constraintSolver = ConstraintSolver()
 CONSTRAINT_ATOM_NAME = "__constraint("
 debugEvaluationConstraint = False
-debugPrint = False
+debugPrint = True
 
 # var e' l'id dell'atomo e name e' il suo nome
 def addedVarName(var, name):
