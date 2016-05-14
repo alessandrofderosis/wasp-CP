@@ -5,8 +5,16 @@ import sys
 import re
 
 class ConstraintSolver:
+     min = None
+     max = None
+     solvableMaxIndex = None
+     oneSol = True
+     
      domain = None
      variablesSet = set()
+     
+     domainProgression = True
+     
     
      
      def __init__(self):
@@ -15,7 +23,17 @@ class ConstraintSolver:
       
      def setEnviroment(self):
          #print self.variablesSet, "   " , self.domain
-         self.problem.addVariables(ConstraintSolver.variablesSet, ConstraintSolver.domain)
+         if ConstraintSolver.domainProgression:
+            if ConstraintSolver.solvableMaxIndex is None:
+                if ConstraintSolver.min == 0:
+                    ConstraintSolver.solvableMaxIndex = ConstraintSolver.min + 2
+                else:
+                    ConstraintSolver.solvableMaxIndex = ConstraintSolver.min * 2
+         else:
+            ConstraintSolver.solvableMaxIndex = ConstraintSolver.max
+            
+         ConstraintSolver.domain = range(ConstraintSolver.min,ConstraintSolver.solvableMaxIndex+1)
+         self.problem.addVariables(ConstraintSolver.variablesSet,ConstraintSolver.domain)
         
      def addConstraints(self):
          for constraint in self.constraints:
@@ -46,7 +64,7 @@ class ConstraintSolver:
         t.setEnviroment()
         t.constraints=constraintList
         t.addConstraints()      
-        if t.problem.getSolution() is None:
+        if t.solveIntelligent() is None:
             return False
         return True
      
@@ -67,8 +85,11 @@ class ConstraintSolver:
                     c1ListConstraint.append(listConstraint[i])
                     lastIndex = i
                     if self.atLeastOneSolution(c1ListConstraint) is False:
+                        ConstraintSolver.solvableMaxIndex = None
+                        self.resetCPSolver()
                         return c1ListConstraint
                     break
+        
                 
      
      def printSolution(self,sol,debugEvaluationConstraint):
@@ -78,7 +99,30 @@ class ConstraintSolver:
         
 #         else:
 #             print sol
+
+     def solveIntelligent(self):
+        sol = self.problem.getSolution()
+        while sol is None and ConstraintSolver.solvableMaxIndex<ConstraintSolver.max:
+            if (ConstraintSolver.solvableMaxIndex * 2 )> ConstraintSolver.max:
+                ConstraintSolver.solvableMaxIndex = ConstraintSolver.max
+            else:
+                ConstraintSolver.solvableMaxIndex *= 2
+            if debugPrint:print "solvableMaxIndex",ConstraintSolver.solvableMaxIndex
+            self.resetCPSolver()
+            self.addConstraints()
+            sol = self.problem.getSolution()
+
+        if sol is None:
+            ConstraintSolver.solvableMaxIndex = None
+            self.resetCPSolver()
+        
+        return sol
+        
     
+     def resetCPSolver(self):
+        self.problem.reset()
+        self.setEnviroment()
+        
      
      def checkConsistency(self,sol, constraint):
         negativeConstraint = constraint.startswith('not ')
@@ -118,7 +162,7 @@ regexOperator = re.compile('\$(\>=|\<=|\<|\>|\+|\*|\-|\/|\%|\==|\!=)')
 constraintSolver = ConstraintSolver()
 CONSTRAINT_ATOM_NAME = "__constraint("
 debugEvaluationConstraint = False
-debugPrint = True
+debugPrint = False
 
 # var e' l'id dell'atomo e name e' il suo nome
 def addedVarName(var, name):
@@ -165,15 +209,14 @@ def onLiteralTrue(lit, pos):
     ############# non dovrebbe accadere
     if dict[-lit] in constraintSolver.constraints:
         constraintSolver.constraints.remove(dict[-lit])
-        constraintSolver.problem.reset()
-        constraintSolver.setEnviroment()
+        constraintSolver.resetCPSolver()
         if debugPrint: print "on lit true -lit ", -lit, " ",dict[-lit], "already presents"
     ###############################
     
     constraintSolver.addConstraints()
     if debugPrint: print constraintSolver.constraints
     if debugPrint: print "try to get solution"
-    s = constraintSolver.problem.getSolution() 
+    s = constraintSolver.solveIntelligent() 
     #if debugPrint: print s
     if s is None:
         if debugPrint:print "s is not sat" 
@@ -205,8 +248,7 @@ def onLiteralsUndefined(*lits):
         if dict[lit] in constraintSolver.constraints:
             constraintSolver.constraints.remove(dict[lit])
             if debugPrint: print "removed constraint ",lit, dict[lit] 
-    constraintSolver.problem.reset()
-    constraintSolver.setEnviroment()
+    constraintSolver.resetCPSolver()
     return
 
 # notifica quando un letterale e' inferito true al livello 0
@@ -219,8 +261,7 @@ def onLitAtLevelZero(lit):
         if dict[-lit] in constraintSolver.constraints:
             if debugPrint: print "onLivAtLev0 removed ",-lit,dict[-lit]
             constraintSolver.constraints.remove(dict[-lit])
-            constraintSolver.problem.reset()
-            constraintSolver.setEnviroment()
+            constraintSolver.resetCPSolver()
         ###########################
         
         
@@ -233,7 +274,7 @@ def onLitAtLevelZero(lit):
 def isProgramIncoherent():
     if debugPrint: print constraintSolver.constraints
     constraintSolver.addConstraints()
-    sol=constraintSolver.problem.getSolution();
+    sol=constraintSolver.solveIntelligent()
     if debugPrint: print sol
     if sol is None and len(constraintSolver.constraints)>0:
         if debugPrint: print "incoherent at lev 0"  
@@ -262,7 +303,9 @@ def setDomainFromString(domainString):
      min = int(domain[0])
      max = int(domain[1])
      assert(min <= max)
-     ConstraintSolver.domain = range(min, max + 1)
+     ConstraintSolver.min = min
+     ConstraintSolver.max = max
+     #ConstraintSolver.domain = range(min, max + 1)
 
 def constraintAtomToString(lit,neg):
     arguments = find_arguments(lit) 
