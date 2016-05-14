@@ -40,6 +40,9 @@ __constraint("$domain(0..4)").
 {__constraint(end(S) ,"$-",end(T), "$>", 2)}:-occurs(make_coffee,S),occurs(m,T).
 {__constraint(end(S) ,"$-",end(T), "$<", -2)}:-occurs(make_coffee,S),occurs(make_toast,T).
 
+#external __constraint/3.
+#external __constraint/5.
+
 
 
 	

@@ -1,15 +1,8 @@
 import re
-from debian.debtags import output
 
 from constraint import *
 import sys
 import re
-from twisted.trial._synctest import Todo
-from numpy.core.defchararray import replace
-from _dbus_bindings import String
-from _ast import IsNot, arguments
-from cv2 import line
-from numpy import negative
 
 class ConstraintSolver:
      domain = None
@@ -34,7 +27,7 @@ class ConstraintSolver:
              index = 0    
              for variable in m:
                  variablesList.append(variable)
-                 newLine = constraint.replace(variable, "args[" + String(index) + ']')
+                 newLine = constraint.replace(variable, "args[" + str(index) + ']')
                  if newLine != constraint:
                     constraint = newLine
                     index += 1
