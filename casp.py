@@ -1,5 +1,3 @@
-import re
-
 from constraint import *
 import sys
 import re
@@ -64,6 +62,7 @@ class ConstraintSolver:
         t.setEnviroment()
         t.constraints=constraintList
         t.addConstraints()      
+        if debugPrint: print "try to get solution IIS ", constraintList
         if t.solveIntelligent() is None:
             return False
         return True
@@ -163,6 +162,7 @@ constraintSolver = ConstraintSolver()
 CONSTRAINT_ATOM_NAME = "__constraint("
 debugEvaluationConstraint = False
 debugPrint = False
+doSimpAtLev0= True
 
 # var e' l'id dell'atomo e name e' il suo nome
 def addedVarName(var, name):
@@ -286,6 +286,31 @@ def isProgramIncoherent():
     
 def onAnswerSet(*answer_set):
     print constraintSolver.problem.getSolution()
+    
+def simplifyAtLevelZero():
+    out = []
+    if not doSimpAtLev0:
+        return out
+        
+    if debugPrint: print "simplifyAtLevelZero enter",constraintSolver.constraints
+    for id in dict.iterkeys():
+        if id >= 0 and dict[id] not in constraintSolver.constraints:
+            csp = ConstraintSolver()
+            csp.resetCPSolver()
+            csp.constraints = list(constraintSolver.constraints)
+            csp.constraints.append(dict[id])
+            csp.addConstraints()
+            if debugPrint: print "simplifyAtLevelZero try to get solution",csp.constraints
+            s = csp.solveIntelligent()
+            if s is None:
+                if debugPrint: print "simplifyAtLevelZero  append",-id, dict[id] 
+                out.append(-id)
+            else:
+                if debugPrint: print "simplifyAtLevelZero  append none"
+    
+    if debugPrint: print "simplifyAtLevelZero",out
+    return out
+    
     
 
 def find_arguments(s):
