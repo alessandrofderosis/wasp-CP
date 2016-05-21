@@ -1,69 +1,51 @@
-from constraint import *
+from Numberjack import *
 import sys
 import re
 
 class ConstraintSolver:
      min = None
      max = None
-     solvableMaxIndex = None
-     oneSol = True
      
-     domain = None
      variablesSet = set()
      
-     domainProgression = True
+     numberZeroVariable=0
      
-    
      
      def __init__(self):
-      self.problem = Problem()
+      self.var ={}
+      self.zero = {}
+      self.model = Model()
       self.constraints = []
       
      def setEnviroment(self):
-         #print self.variablesSet, "   " , self.domain
-         if ConstraintSolver.domainProgression:
-            if ConstraintSolver.solvableMaxIndex is None:
-                if ConstraintSolver.min == 0:
-                    ConstraintSolver.solvableMaxIndex = ConstraintSolver.min + 2
-                else:
-                    ConstraintSolver.solvableMaxIndex = ConstraintSolver.min * 2
-         else:
-            ConstraintSolver.solvableMaxIndex = ConstraintSolver.max
-            
-         ConstraintSolver.domain = range(ConstraintSolver.min,ConstraintSolver.solvableMaxIndex+1)
-         self.problem.addVariables(ConstraintSolver.variablesSet,ConstraintSolver.domain)
+         for v in ConstraintSolver.variablesSet:
+             self.var[v] = Variable(ConstraintSolver.min,ConstraintSolver.max,v)
+         for i in range(ConstraintSolver.numberZeroVariable):
+             self.zero[i]= Variable(0,0)
         
      def addConstraints(self):
-         for constraint in self.constraints:
-             negativeConstraint = constraint.startswith('not ')
-             if negativeConstraint:
-                 constraint = constraint[4:len(constraint)]
-             m = regexVariable.findall(constraint)
-             variablesList = []
-             index = 0    
-             for variable in m:
-                 variablesList.append(variable)
-                 newLine = constraint.replace(variable, "args[" + str(index) + ']')
-                 if newLine != constraint:
-                    constraint = newLine
-                    index += 1
-             def make_closure(constraint,negativeConstraint):
-                 if negativeConstraint: 
-                     return lambda *args: not eval(constraint)
-                 else:
-                     return lambda *args: eval(constraint)
-#              print constraint, "  ", variablesList
-             self.problem.addConstraint(make_closure(constraint,negativeConstraint), variablesList)
+             var = self.var
+             zero = self.zero
+             for constraint in self.constraints:
+                 self.model.add(eval(constraint))
                            
                 
 
+     def solve(self):
+         solver = self.model.load("Mistral")
+         return solver.solve()
+     
+     def getSolution(self):
+         for key in self.var:
+             print key,":", self.var[key].get_value()
+     
      def atLeastOneSolution(self,constraintList):
         t = ConstraintSolver()
+        t.constraints=list(constraintList)
         t.setEnviroment()
-        t.constraints=constraintList
         t.addConstraints()      
         if debugPrint: print "try to get solution IIS ", constraintList
-        if t.solveIntelligent() is None:
+        if t.solve() is False:
             return False
         return True
      
@@ -84,72 +66,19 @@ class ConstraintSolver:
                     c1ListConstraint.append(listConstraint[i])
                     lastIndex = i
                     if self.atLeastOneSolution(c1ListConstraint) is False:
-                        ConstraintSolver.solvableMaxIndex = None
                         self.resetCPSolver()
                         return c1ListConstraint
                     break
         
                 
      
-     def printSolution(self,sol,debugEvaluationConstraint):
-        if debugEvaluationConstraint:
-                for c in self.constraints:
-                   self.checkConsistency(sol, c)
-        
-#         else:
-#             print sol
-
-     def solveIntelligent(self):
-        sol = self.problem.getSolution()
-        while sol is None and ConstraintSolver.solvableMaxIndex<ConstraintSolver.max:
-            if (ConstraintSolver.solvableMaxIndex * 2 )> ConstraintSolver.max:
-                ConstraintSolver.solvableMaxIndex = ConstraintSolver.max
-            else:
-                ConstraintSolver.solvableMaxIndex *= 2
-            if debugPrint:print "solvableMaxIndex",ConstraintSolver.solvableMaxIndex
-            self.resetCPSolver()
-            self.addConstraints()
-            sol = self.problem.getSolution()
-
-        if sol is None:
-            ConstraintSolver.solvableMaxIndex = None
-            self.resetCPSolver()
-        
-        return sol
         
     
      def resetCPSolver(self):
-        self.problem.reset()
-        self.setEnviroment()
+          self.setEnviroment()
+          self.model = Model()
         
      
-     def checkConsistency(self,sol, constraint):
-        negativeConstraint = constraint.startswith('not ')
-        if negativeConstraint:
-             constraint = constraint[4:len(constraint)]
-        m = regexVariable.findall(constraint)
-        variablesList = []
-        index = 0    
-        for variable in m:
-            variablesList.append(variable)
-            newLine = constraint.replace(variable, "args[" + String(index) + ']')
-            if newLine != constraint:
-               constraint = newLine
-               index += 1
-        def make_closure(constraint,negativeConstraint):
-                 if negativeConstraint: 
-                     return lambda *args: not eval(constraint)
-                 else:
-                     return lambda *args: eval(constraint)
-        f=make_closure(constraint,negativeConstraint)
-        arguments=[]
-        for v in variablesList:
-            arguments.append(sol[v])
-            print v,":",sol[v],
-        if negativeConstraint:
-           print "not ",constraint, f(*arguments)
-        else:     
-            print constraint, f(*arguments)
      
 # Start module casp                
 ID_lits = []
@@ -171,8 +100,10 @@ def addedVarName(var, name):
     elif name.startswith(CONSTRAINT_ATOM_NAME):
          ID_lits.append(var) 
          dict[var] = constraintAtomToString(name,False)
+         #if debugPrint: print "variable", var, dict[var]
          ID_lits.append(-var)
          dict[-var]= constraintAtomToString(name, True)
+         #if debugPrint: print "variable",-var, dict[-var]
          if  var in ID_lev0:
              if debugPrint: print "added lev 0", var, dict[var]
              constraintSolver.constraints.append(dict[var])
@@ -216,24 +147,32 @@ def onLiteralTrue(lit, pos):
     constraintSolver.addConstraints()
     if debugPrint: print constraintSolver.constraints
     if debugPrint: print "try to get solution"
-    s = constraintSolver.solveIntelligent() 
     #if debugPrint: print s
-    if s is None:
+    if constraintSolver.solve() is False:
         if debugPrint:print "s is not sat" 
-        iis = constraintSolver.computeIISBackwardForwardFiltering(False)
-        if debugPrint:print "iis", iis
-        output.append(-lit)
-        if len(iis)==1:
+        if constraintSolver.atLeastOneSolution([dict[lit]]) is False:
             reasons.append(lit)
+            output.append(-lit)
         else:
-            for constraint in iis:
+            iis = constraintSolver.computeIISBackwardForwardFiltering(False)
+            if debugPrint:print "iis", iis
+            if len(iis)==1:
+                ####### questo for non ci vuole
                 for id, constr in dict.iteritems():
-                    if constr == constraint and id!=lit:
-                        reasons.append(id)
-                        if debugPrint:print "reason ",id, constr
+                        if constr == iis[0]:
+                            reasons.append(id)
+                            output.append(-id)
+                            break
+            else:
+                for constraint in iis:
+                    for id, constr in dict.iteritems():
+                        if constr == constraint and id!=lit:
+                            reasons.append(id)
+                            if debugPrint:print "reason ",id, constr
+                output.append(-lit)
         if debugPrint:print "output  ",output 
     else :
-        constraintSolver.printSolution(s, debugEvaluationConstraint)
+        if debugPrint:constraintSolver.getSolution()
     return output
 
 # per ogni letterale inferito la ragione e' una clausola C. Il metodo restituisce C.
@@ -274,18 +213,16 @@ def onLitAtLevelZero(lit):
 def isProgramIncoherent():
     if debugPrint: print constraintSolver.constraints
     constraintSolver.addConstraints()
-    sol=constraintSolver.solveIntelligent()
-    if debugPrint: print sol
-    if sol is None and len(constraintSolver.constraints)>0:
+    
+    if constraintSolver.solve() is False and len(constraintSolver.constraints)>0:
         if debugPrint: print "incoherent at lev 0"  
         return 1
     else:
-        constraintSolver.printSolution(sol, debugEvaluationConstraint)
         if debugPrint: print "coherent at lev 0"  
         return 0
     
 def onAnswerSet(*answer_set):
-    print constraintSolver.problem.getSolution()
+     constraintSolver.getSolution()
     
 def simplifyAtLevelZero():
     out = []
@@ -301,8 +238,7 @@ def simplifyAtLevelZero():
             csp.constraints.append(dict[id])
             csp.addConstraints()
             if debugPrint: print "simplifyAtLevelZero try to get solution",csp.constraints
-            s = csp.solveIntelligent()
-            if s is None:
+            if csp.solve() is False:
                 if debugPrint: print "simplifyAtLevelZero  append",-id, dict[id] 
                 out.append(-id)
             else:
@@ -321,7 +257,7 @@ def find_arguments(s):
         return "" 
 
 def setDomainFromString(domainString):
-     assert(constraintSolver.domain is None)
+     assert(constraintSolver.min is None and constraintSolver.max is None )
      regexDomain = re.compile('\d+')
      domain = regexDomain.findall(domainString)
      list(domain)
@@ -330,29 +266,60 @@ def setDomainFromString(domainString):
      assert(min <= max)
      ConstraintSolver.min = min
      ConstraintSolver.max = max
-     #ConstraintSolver.domain = range(min, max + 1)
 
 def constraintAtomToString(lit,neg):
     arguments = find_arguments(lit) 
     arguments = arguments.replace('"', "")
     toReturn = ""
     operators = regexOperator.findall(arguments)
-    variablesAndConstants = regexVariableAndConstant.findall(arguments) 
-    for i in range(len(variablesAndConstants)):
-        toReturn += variablesAndConstants[i]
-        
-        if regexVariable.match(variablesAndConstants[i]) is not None:
-            if variablesAndConstants[i][len(variablesAndConstants[i]) - 1] == ',':
-                ConstraintSolver.variablesSet.add(variablesAndConstants[i][0:len(variablesAndConstants[i]) - 1])
-            else :
-                ConstraintSolver.variablesSet.add(variablesAndConstants[i])
+    variablesAndConstants = regexVariableAndConstant.findall(arguments)
+    i=0 
+    while i < len(variablesAndConstants):
+        skipVariables =False;
         if i < len(operators):
-            toReturn = toReturn[0:len(toReturn) - 1] + operators[i].replace("$", "")
-    if neg:
-        toReturn = "not " + toReturn
+            # fix for the problem: x - x operator expression
+            if "-" in operators[i]:
+                if regexVariable.match(variablesAndConstants[i]) is not None and regexVariable.match(variablesAndConstants[i+1]) is not None and variablesAndConstants[i] in variablesAndConstants[i+1]:
+                    i+=1
+                    toReturn+="zero["+ str(ConstraintSolver.numberZeroVariable)+"]"
+                    if neg:
+                        ConstraintSolver.numberZeroVariable+=1
+                    skipVariables= True
+                
+        if  not skipVariables:
+            if regexVariable.match(variablesAndConstants[i]) is not None:
+                if variablesAndConstants[i][len(variablesAndConstants[i]) - 1] == ',':
+                    ConstraintSolver.variablesSet.add(variablesAndConstants[i][0:len(variablesAndConstants[i]) - 1])
+                    toReturn += "var[\'"+variablesAndConstants[i][0:len(variablesAndConstants[i]) - 1]+"\']"
+                else :
+                    ConstraintSolver.variablesSet.add(variablesAndConstants[i])
+                    toReturn += "var[\'"+variablesAndConstants[i]+"\']"
+            else:
+                toReturn += variablesAndConstants[i]
+        
+        if i < len(operators):
+            if neg:
+                toReturn = toReturn[0:len(toReturn)] + getOppositeOperator(operators[i].replace("$", ""))
+            else:
+                toReturn = toReturn[0:len(toReturn)] + operators[i].replace("$", "")
+        i+=1
     return toReturn
 
-
+def getOppositeOperator(operator):
+    if operator==">=":
+        return "<"
+    elif operator== ">":
+        return "<="
+    elif operator=="<=":
+        return ">"
+    elif operator=="<":
+        return ">="
+    elif operator == "==":
+        return "!="
+    elif operator == "!=":
+        return "=="
+    else:
+        return operator
 
        
 
