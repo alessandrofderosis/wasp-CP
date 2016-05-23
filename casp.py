@@ -70,6 +70,35 @@ class ConstraintSolver:
                         return c1ListConstraint
                     break
         
+     
+#      def computeIISBackwardForwardFiltering(self,backward):
+# 
+#         listConstraint=list(self.constraints)
+#         if backward:
+#             listConstraint.reverse()
+#         lastIndex=len(listConstraint)
+#         c1 = ConstraintSolver()
+#         c1.setEnviroment()
+#         t = ConstraintSolver()
+#         #c1ListConstraint =[]
+#         while True:
+#             #print "c1",c1ListConstraint
+#             t.resetCPSolver()
+#             t.constraints = list (c1.constraints)
+#             t.setEnviroment()
+# #             #Tconstraints = list(c1ListConstraint)
+#             for i in range(lastIndex):
+#                 t.constraints.append(listConstraint[i])
+#                 t.addConstraints()
+#                 if t.solve() is False:
+#                     c1.constraints.append(listConstraint[i])
+#                     #c1ListConstraint.append(listConstraint[i])
+#                     lastIndex = i
+#                     if c1.solve() is False:
+#                         self.resetCPSolver()
+#                         return c1.constraints
+#                     break
+#         return          
                 
      
         
@@ -157,12 +186,8 @@ def onLiteralTrue(lit, pos):
             iis = constraintSolver.computeIISBackwardForwardFiltering(False)
             if debugPrint:print "iis", iis
             if len(iis)==1:
-                ####### questo for non ci vuole
-                for id, constr in dict.iteritems():
-                        if constr == iis[0]:
-                            reasons.append(id)
-                            output.append(-id)
-                            break
+                reasons.append(lit)
+                output.append(-lit)
             else:
                 for constraint in iis:
                     for id, constr in dict.iteritems():
@@ -294,6 +319,8 @@ def constraintAtomToString(lit,neg):
                 else :
                     ConstraintSolver.variablesSet.add(variablesAndConstants[i])
                     toReturn += "var[\'"+variablesAndConstants[i]+"\']"
+            elif variablesAndConstants[i][len(variablesAndConstants[i]) - 1] == ',':
+                toReturn += variablesAndConstants[i][0:len(variablesAndConstants[i]) - 1]
             else:
                 toReturn += variablesAndConstants[i]
         
