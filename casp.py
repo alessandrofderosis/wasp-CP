@@ -12,6 +12,7 @@ class ConstraintSolver:
      
      
      def __init__(self):
+      self.solver = None
       self.var ={}
       self.zero = {}
       self.model = Model()
@@ -22,18 +23,20 @@ class ConstraintSolver:
              self.var[v] = Variable(ConstraintSolver.min,ConstraintSolver.max,v)
          for i in range(ConstraintSolver.numberZeroVariable):
              self.zero[i]= Variable(0,0)
+             
+        
         
      def addConstraints(self):
-             var = self.var
-             zero = self.zero
-             for constraint in self.constraints:
-                 self.model.add(eval(constraint))
+         var = self.var
+         zero = self.zero
+         for constraint in self.constraints:
+             self.model.add(eval(constraint))
                            
                 
 
      def solve(self):
-         solver = self.model.load("Mistral")
-         return solver.solve()
+         self.solver = self.model.load("Mistral")
+         return self.solver.solve()
      
      def getSolution(self):
          for key in self.var:
@@ -44,32 +47,10 @@ class ConstraintSolver:
         t.constraints=list(constraintList)
         t.setEnviroment()
         t.addConstraints()      
-        if debugPrint: print "try to get solution IIS ", constraintList
+        #if debugPrint: print "try to get solution IIS 1", constraintList
         if t.solve() is False:
             return False
         return True
-     
-     def computeIISBackwardForwardFiltering(self,backward):
-
-        listConstraint=list(self.constraints)
-        if backward:
-            listConstraint.reverse()
-        lastIndex=len(listConstraint)
-        
-        c1ListConstraint =[]
-        while True:
-            #print "c1",c1ListConstraint
-            Tconstraints = list(c1ListConstraint)
-            for i in range(lastIndex):
-                Tconstraints.append(listConstraint[i])
-                if self.atLeastOneSolution(Tconstraints) is False:
-                    c1ListConstraint.append(listConstraint[i])
-                    lastIndex = i
-                    if self.atLeastOneSolution(c1ListConstraint) is False:
-                        self.resetCPSolver()
-                        return c1ListConstraint
-                    break
-        
      
 #      def computeIISBackwardForwardFiltering(self,backward):
 # 
@@ -77,28 +58,53 @@ class ConstraintSolver:
 #         if backward:
 #             listConstraint.reverse()
 #         lastIndex=len(listConstraint)
-#         c1 = ConstraintSolver()
-#         c1.setEnviroment()
-#         t = ConstraintSolver()
-#         #c1ListConstraint =[]
+#         
+#         c1ListConstraint =[]
 #         while True:
 #             #print "c1",c1ListConstraint
-#             t.resetCPSolver()
-#             t.constraints = list (c1.constraints)
-#             t.setEnviroment()
-# #             #Tconstraints = list(c1ListConstraint)
+#             Tconstraints = list(c1ListConstraint)
 #             for i in range(lastIndex):
-#                 t.constraints.append(listConstraint[i])
-#                 t.addConstraints()
-#                 if t.solve() is False:
-#                     c1.constraints.append(listConstraint[i])
-#                     #c1ListConstraint.append(listConstraint[i])
+#                 Tconstraints.append(listConstraint[i])
+#                 if self.atLeastOneSolution(Tconstraints) is False:
+#                     c1ListConstraint.append(listConstraint[i])
 #                     lastIndex = i
-#                     if c1.solve() is False:
+#                     if self.atLeastOneSolution(c1ListConstraint) is False:
 #                         self.resetCPSolver()
-#                         return c1.constraints
+#                         return c1ListConstraint
 #                     break
-#         return          
+        
+     
+     def computeIISBackwardForwardFiltering(self,backward):
+        if debugPrint:print "computeIISBackwardForwardFiltering enter"
+        listConstraint=list(self.constraints)
+        if backward:
+            listConstraint.reverse()
+        lastIndex=len(listConstraint)
+        c1 = ConstraintSolver()
+        c1.setEnviroment()
+        t = self.__class__()
+        #c1ListConstraint =[]
+        while True:
+            #print "c1",c1ListConstraint
+            t.resetCPSolver()
+            t.constraints = list (c1.constraints)
+            t.setEnviroment()
+#             #Tconstraints = list(c1ListConstraint)
+            for i in range(lastIndex):
+                t.resetCPSolver()
+                t.constraints.append(listConstraint[i])
+                t.addConstraints()
+                if t.solve() is False:
+                    c1.constraints.append(listConstraint[i])
+                    #c1ListConstraint.append(listConstraint[i])
+                    c1.addConstraints()
+                    lastIndex = i
+                    print "c1"
+                    if c1.solve() is False:
+                        self.resetCPSolver()
+                        return c1.constraints
+                    break
+        return          
                 
      
         
@@ -106,6 +112,7 @@ class ConstraintSolver:
      def resetCPSolver(self):
           self.setEnviroment()
           self.model = Model()
+          self.solver = None
         
      
      
@@ -119,7 +126,7 @@ regexOperator = re.compile('\$(\>=|\<=|\<|\>|\+|\*|\-|\/|\%|\==|\!=)')
 constraintSolver = ConstraintSolver()
 CONSTRAINT_ATOM_NAME = "__constraint("
 debugEvaluationConstraint = False
-debugPrint = False
+debugPrint = True
 doSimpAtLev0= True
 
 # var e' l'id dell'atomo e name e' il suo nome
