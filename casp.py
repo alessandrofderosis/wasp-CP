@@ -24,6 +24,12 @@ class ConstraintSolver:
          for i in range(ConstraintSolver.numberZeroVariable):
              self.zero[i]= Variable(0,0)
              
+             
+     def addConstraint(self,constraint):
+          var = self.var
+          zero = self.zero
+          self.constraints.append(constraint)
+          self.model.add(eval(constraint))        
         
         
      def addConstraints(self):
@@ -74,7 +80,7 @@ class ConstraintSolver:
 #                     break
         
      
-     def computeIISBackwardForwardFiltering(self,backward):
+     def computeIISBackwardForwardFiltering(self,backward,lastConstraint):
         if debugPrint:print "computeIISBackwardForwardFiltering enter"
         listConstraint=list(self.constraints)
         if backward:
@@ -82,26 +88,28 @@ class ConstraintSolver:
         lastIndex=len(listConstraint)
         c1 = ConstraintSolver()
         c1.setEnviroment()
-        t = self.__class__()
+        c1.addConstraint(lastConstraint)
+        t = ConstraintSolver()
         #c1ListConstraint =[]
         while True:
             #print "c1",c1ListConstraint
             t.resetCPSolver()
             t.constraints = list (c1.constraints)
             t.setEnviroment()
+            t.addConstraints()
 #             #Tconstraints = list(c1ListConstraint)
             for i in range(lastIndex):
-                t.resetCPSolver()
-                t.constraints.append(listConstraint[i])
-                t.addConstraints()
+#                 t.resetCPSolver()
+#                 t.constraints.append(listConstraint[i])
+                t.addConstraint(listConstraint[i])
                 if t.solve() is False:
-                    c1.constraints.append(listConstraint[i])
+#                     c1.constraints.append(listConstraint[i])
                     #c1ListConstraint.append(listConstraint[i])
-                    c1.addConstraints()
+                    c1.addConstraint(listConstraint[i])
                     lastIndex = i
-                    print "c1"
                     if c1.solve() is False:
                         self.resetCPSolver()
+                        self.addConstraints()
                         return c1.constraints
                     break
         return          
@@ -127,7 +135,7 @@ constraintSolver = ConstraintSolver()
 CONSTRAINT_ATOM_NAME = "__constraint("
 debugEvaluationConstraint = False
 debugPrint = True
-doSimpAtLev0= True
+doSimpAtLev0= False
 
 # var e' l'id dell'atomo e name e' il suo nome
 def addedVarName(var, name):
@@ -155,6 +163,7 @@ def onAtomElimination(var):
 # restituisce i letterali per cui ti interessa la notifica del cambio di valore di verita'
 def getLiterals(nVars):
     constraintSolver.setEnviroment()
+    constraintSolver.addConstraints()
     return ID_lits
 
 # definisce gli atomi da non eliminare
@@ -171,16 +180,17 @@ def onLiteralTrue(lit, pos):
     reasons = []
     if debugPrint: print "on lit true lit: ",lit, dict[lit]
     if dict[lit] not in constraintSolver.constraints:
-        constraintSolver.constraints.append(dict[lit])
+        constraintSolver.addConstraint(dict[lit])
     
     ############# non dovrebbe accadere
     if dict[-lit] in constraintSolver.constraints:
         constraintSolver.constraints.remove(dict[-lit])
         constraintSolver.resetCPSolver()
+        constraintSolver.addConstraints()
         if debugPrint: print "on lit true -lit ", -lit, " ",dict[-lit], "already presents"
     ###############################
     
-    constraintSolver.addConstraints()
+#     constraintSolver.addConstraints()
     if debugPrint: print constraintSolver.constraints
     if debugPrint: print "try to get solution"
     #if debugPrint: print s
@@ -190,7 +200,7 @@ def onLiteralTrue(lit, pos):
             reasons.append(lit)
             output.append(-lit)
         else:
-            iis = constraintSolver.computeIISBackwardForwardFiltering(False)
+            iis = constraintSolver.computeIISBackwardForwardFiltering(False,dict[lit])
             if debugPrint:print "iis", iis
             if len(iis)==1:
                 reasons.append(lit)
@@ -220,6 +230,7 @@ def onLiteralsUndefined(*lits):
             constraintSolver.constraints.remove(dict[lit])
             if debugPrint: print "removed constraint ",lit, dict[lit] 
     constraintSolver.resetCPSolver()
+    constraintSolver.addConstraints()
     return
 
 # notifica quando un letterale e' inferito true al livello 0
@@ -233,10 +244,11 @@ def onLitAtLevelZero(lit):
             if debugPrint: print "onLivAtLev0 removed ",-lit,dict[-lit]
             constraintSolver.constraints.remove(dict[-lit])
             constraintSolver.resetCPSolver()
+            constraintSolver.addConstraints()
         ###########################
         
         
-        constraintSolver.constraints.append(dict[lit])
+        constraintSolver.addConstraint(dict[lit])
     return
 
 #prima di partire controlla se il programma e' incoerente per via del plugin
