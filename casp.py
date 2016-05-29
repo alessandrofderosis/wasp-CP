@@ -1,4 +1,5 @@
 from Numberjack import *
+from collections import defaultdict
 import sys
 import re
 
@@ -89,10 +90,22 @@ class ConstraintSolver:
         c1 = ConstraintSolver()
         c1.setEnviroment()
         c1.addConstraint(lastConstraint)
+        
+        if c1.solve is False:
+            return [lastConstraint]
+        
+        toVisitC1=set()
+        for var in variablesInConstraint[ constraintDictID[lastConstraint] ]:
+            toVisitC1.update(linkedVariables[var])
+                
+        toVisitT=set(toVisitC1)
+                
+        
         t = ConstraintSolver()
         #c1ListConstraint =[]
         while True:
             #print "c1",c1ListConstraint
+            toVisitT=set(toVisitC1)
             t.resetCPSolver()
             t.constraints = list (c1.constraints)
             t.setEnviroment()
@@ -101,17 +114,25 @@ class ConstraintSolver:
             for i in range(lastIndex):
 #                 t.resetCPSolver()
 #                 t.constraints.append(listConstraint[i])
-                t.addConstraint(listConstraint[i])
-                if t.solve() is False:
-#                     c1.constraints.append(listConstraint[i])
-                    #c1ListConstraint.append(listConstraint[i])
-                    c1.addConstraint(listConstraint[i])
-                    lastIndex = i
-                    if c1.solve() is False:
-                        self.resetCPSolver()
-                        self.addConstraints()
-                        return c1.constraints
-                    break
+                for v in variablesInConstraint[constraintDictID[listConstraint[i]]]:
+                    if v in toVisitT:
+                        t.addConstraint(listConstraint[i])
+                        for var in variablesInConstraint[ constraintDictID[listConstraint[i]] ]:
+                            toVisitT.update(linkedVariables[var])
+                
+                        if t.solve() is False:
+            #                     c1.constraints.append(listConstraint[i])
+                            #c1ListConstraint.append(listConstraint[i])
+                            c1.addConstraint(listConstraint[i])
+                            lastIndex = i
+                            for var in variablesInConstraint[ constraintDictID[listConstraint[i]] ]:
+                                toVisitC1.update(linkedVariables[var])
+                            if c1.solve() is False:
+                                self.resetCPSolver()
+                                self.addConstraints()
+                                return c1.constraints
+                            break
+                        break
         return          
                 
      
@@ -134,8 +155,12 @@ regexOperator = re.compile('\$(\>=|\<=|\<|\>|\+|\*|\-|\/|\%|\==|\!=)')
 constraintSolver = ConstraintSolver()
 CONSTRAINT_ATOM_NAME = "__constraint("
 debugEvaluationConstraint = False
-debugPrint = True
+debugPrint = False
 doSimpAtLev0= False
+
+linkedVariables = defaultdict(set)
+variablesInConstraint = {}
+constraintDictID = {}
 
 # var e' l'id dell'atomo e name e' il suo nome
 def addedVarName(var, name):
@@ -143,10 +168,12 @@ def addedVarName(var, name):
          setDomainFromString(name)
     elif name.startswith(CONSTRAINT_ATOM_NAME):
          ID_lits.append(var) 
-         dict[var] = constraintAtomToString(name,False)
+         dict[var] = constraintAtomToString(name,False,var)
+         constraintDictID[dict[var]]=var
          #if debugPrint: print "variable", var, dict[var]
          ID_lits.append(-var)
-         dict[-var]= constraintAtomToString(name, True)
+         dict[-var]= constraintAtomToString(name, True,-var)
+         constraintDictID[dict[-var]]=-var
          #if debugPrint: print "variable",-var, dict[-var]
          if  var in ID_lev0:
              if debugPrint: print "added lev 0", var, dict[var]
@@ -196,22 +223,22 @@ def onLiteralTrue(lit, pos):
     #if debugPrint: print s
     if constraintSolver.solve() is False:
         if debugPrint:print "s is not sat" 
-        if constraintSolver.atLeastOneSolution([dict[lit]]) is False:
+#         if constraintSolver.atLeastOneSolution([dict[lit]]) is False:
+#             reasons.append(lit)
+#             output.append(-lit)
+#         else:
+        iis = constraintSolver.computeIISBackwardForwardFiltering(False,dict[lit])
+        if debugPrint:print "iis", iis
+        if len(iis)==1:
             reasons.append(lit)
             output.append(-lit)
         else:
-            iis = constraintSolver.computeIISBackwardForwardFiltering(False,dict[lit])
-            if debugPrint:print "iis", iis
-            if len(iis)==1:
-                reasons.append(lit)
-                output.append(-lit)
-            else:
-                for constraint in iis:
-                    for id, constr in dict.iteritems():
-                        if constr == constraint and id!=lit:
-                            reasons.append(id)
-                            if debugPrint:print "reason ",id, constr
-                output.append(-lit)
+            for constraint in iis:
+                for id, constr in dict.iteritems():
+                    if constr == constraint and id!=lit:
+                        reasons.append(id)
+                        if debugPrint:print "reason ",id, constr
+            output.append(-lit)
         if debugPrint:print "output  ",output 
     else :
         if debugPrint:constraintSolver.getSolution()
@@ -229,12 +256,13 @@ def onLiteralsUndefined(*lits):
         if dict[lit] in constraintSolver.constraints:
             constraintSolver.constraints.remove(dict[lit])
             if debugPrint: print "removed constraint ",lit, dict[lit] 
-    constraintSolver.resetCPSolver()
-    constraintSolver.addConstraints()
+            constraintSolver.resetCPSolver()
+            constraintSolver.addConstraints()
     return
 
 # notifica quando un letterale e' inferito true al livello 0
 def onLitAtLevelZero(lit):
+    if debugPrint:print "onLitAtLevelZero",lit
     ID_lev0.append(lit)
     if dict.get(lit) is not None and dict[lit] not in constraintSolver.constraints:
         if debugPrint: print lit, " at lev 0 ",dict[lit] 
@@ -311,13 +339,14 @@ def setDomainFromString(domainString):
      ConstraintSolver.min = min
      ConstraintSolver.max = max
 
-def constraintAtomToString(lit,neg):
+def constraintAtomToString(lit,neg,var):
     arguments = find_arguments(lit) 
     arguments = arguments.replace('"', "")
     toReturn = ""
     operators = regexOperator.findall(arguments)
     variablesAndConstants = regexVariableAndConstant.findall(arguments)
     i=0 
+    localVariableSet = set()
     while i < len(variablesAndConstants):
         skipVariables =False;
         if i < len(operators):
@@ -334,10 +363,15 @@ def constraintAtomToString(lit,neg):
             if regexVariable.match(variablesAndConstants[i]) is not None:
                 if variablesAndConstants[i][len(variablesAndConstants[i]) - 1] == ',':
                     ConstraintSolver.variablesSet.add(variablesAndConstants[i][0:len(variablesAndConstants[i]) - 1])
+                    localVariableSet.add(variablesAndConstants[i][0:len(variablesAndConstants[i]) - 1])
                     toReturn += "var[\'"+variablesAndConstants[i][0:len(variablesAndConstants[i]) - 1]+"\']"
+                    
+                    
                 else :
                     ConstraintSolver.variablesSet.add(variablesAndConstants[i])
+                    localVariableSet.add(variablesAndConstants[i])
                     toReturn += "var[\'"+variablesAndConstants[i]+"\']"
+                    
             elif variablesAndConstants[i][len(variablesAndConstants[i]) - 1] == ',':
                 toReturn += variablesAndConstants[i][0:len(variablesAndConstants[i]) - 1]
             else:
@@ -349,6 +383,12 @@ def constraintAtomToString(lit,neg):
             else:
                 toReturn = toReturn[0:len(toReturn)] + operators[i].replace("$", "")
         i+=1
+        
+        for v in localVariableSet:
+             for v1 in localVariableSet:
+                 linkedVariables[v].add(v1)
+         
+        variablesInConstraint[var] = localVariableSet
     return toReturn
 
 def getOppositeOperator(operator):
